@@ -22,4 +22,4 @@ cd energy
 python -m SimpleHTTPServer 8000 &
 ```
 
-Then navigate to localhost:8000.
+Then point your browser at localhost:8000
