@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 16px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.bar {
+  fill: steelblue;
+}
+
+.x.axis path {
+  display: none;
+  font-size: 10px;
+}
+
+.slider-wide
+{
+    width: 300px;
+}
+
+#sliders .wrap {
+    display: inline-block;
+}
+
+#sliders label {
+    display: block;
+    text-align: center;
+}
+
+#sliders {
+    display: block;
+}
+
+</style>
+<body>
+    <div id="sliders">
+        <div class="wrap">
+            <label for="DurationSlider">Duration (Days)</label>
+            <input type="range" id="DurationSlider" class="slider-wide" orient="vertical" min="1" max="365" value="365" name="duration" oninput="updateDuration(this.value)" onchange="updateDuration(this.value)">
+            <label id=DurationValueLabel for="DurationSlider">365</label>
+        </div>
+        <div class="wrap">
+            <label for="GasSlider">Annual Gas Usage Estimate (kWH)</label>
+            <input type="range" id="GasSlider" class="slider-wide" orient="vertical" min="0" max="20000" value="5251" name="gas" oninput="updateGas(this.value)" onchange="updateGas(this.value)">
+            <label id=GasValueLabel for="GasSlider">5251</label>
+        </div>
+        <div class="wrap">
+            <label for="ElectricitySlider">Annual Electricity Usage Estimate (kWH)</label>
+            <input type="range" id="ElectricitySlider" class="slider-wide" orient="vertical" min="0" max="20000" value="1748" name="electricity" oninput="updateElectricity(this.value)" onchange="updateElectricity(this.value)">
+            <label id=ElectricityValueLabel for="ElectricitySlider">1748</label>
+        </div>
+
+    </div>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 30, right: 20, bottom: 300, left: 70},
+    width = 1200 - margin.left - margin.right,
+    height = 1000 - margin.top - margin.bottom;
+
+var x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
+
+var y = d3.scale.linear()
+    .rangeRound([height, 0]);
+
+var color = d3.scale.ordinal()
+    .range(["#2c7bb6", "#abd9e9", "#fdae61", "#d7191c"]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .tickFormat(d3.format(",.2f"));
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var daysInYear = 356;
+var settings = [daysInYear, daysInYear, 1748, 5251, 1];
+function updateDuration(newValue) {
+    document.querySelector('#DurationValueLabel').innerHTML = newValue
+    settings[0] = settings[1] = newValue;
+
+    settings[2] = document.querySelector('#ElectricitySlider').value * newValue / daysInYear
+    settings[3] = document.querySelector('#GasSlider').value * newValue / daysInYear
+
+    update()
+}
+
+function updateElectricity(newValue) {
+    document.querySelector('#ElectricityValueLabel').innerHTML = newValue
+    settings[2] = newValue * settings[0] / daysInYear;
+    update()
+}
+
+function updateGas(newValue) {
+    document.querySelector('#GasValueLabel').innerHTML = newValue
+    settings[3] = newValue * settings[0] / daysInYear;
+    update()
+}
+
+function update() {
+    d3.csv("data.csv", function(error, data) {
+      if (error) throw error;
+
+      color.domain(d3.keys(data[0]).filter(function(key) { return key !== "Tariff"; }));
+
+      data.forEach(function(d) {
+        var y0 = 0;
+        var setting = 0;
+        var penceInPound = 100;
+        d.costs = color.domain().map(function(name) { return {name: name, y0: y0, y1: y0 += +d[name] * settings[setting++] / penceInPound}; });
+        d.total = d.costs[d.costs.length - 1].y1;
+      });
+
+      /* Sort in order of cheapest first. */
+      data.sort(function(a, b) { return a.total - b.total; });
+
+      x.domain(data.map(function(d) { return d.Tariff; }));
+      y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+      d3.select("svg").select("g").selectAll("g").remove();
+
+      /* x-axis */
+      svg.append("g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(xAxis)
+
+      /* Rotate x-axis labels */
+      svg.select(".x.axis")
+          .selectAll("text")
+          .attr("transform"," translate(10,70) rotate(65)")
+      
+      /* y-axis */
+      svg.append("g")
+          .attr("class", "y axis")
+          .call(yAxis)
+        .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 6)
+          .attr("dy", ".71em")
+          .style("text-anchor", "end")
+          .text("Cost (£)");
+    
+      /* Draw the bars */
+      var provider = svg.selectAll(".provider")
+          .data(data)
+        .enter().append("g")
+          .attr("class", "g")
+          .attr("transform", function(d) { return "translate(" + x(d.Tariff) + ",0)"; })
+
+      provider.selectAll("rect")
+          .data(function(d) { return d.costs; })
+        .enter().append("rect")
+          .attr("width", x.rangeBand())
+          .attr("y", function(d) { return y(d.y1); })
+          .attr("height", function(d) { return y(d.y0) - y(d.y1); })
+          .style("fill", function(d) { return color(d.name); });
+    
+      /* Add total cost at the top of each bar. */
+      var yTextPadding = 10;
+      provider.selectAll("text")
+           /* Only the top! (there's many rects in one bar) */
+           .data(function(d) { return [d.costs.slice(-1)[0]]; })
+        .enter().append("text")
+        .attr("text-anchor", "middle")
+        .attr("x", function(d) {
+            return x.rangeBand()/2;
+        })
+        .attr("y", function(d) {
+            return y(d.y1)-yTextPadding;
+        })
+        .text(function(d){
+              return "£" + d.y1.toFixed(2)
+        });
+
+      /* Draw the legend */
+      var legendOffset = 300;
+      var legend = svg.selectAll(".legend")
+          .data(color.domain().slice().reverse())
+        .enter().append("g")
+          .attr("class", "legend")
+          .attr("transform", function(d, i) { return "translate(" + (-width + legendOffset) + "," + i * 20 + ")"; });
+
+      legend.append("rect")
+          .attr("x", width - 18)
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", color);
+
+      legend.append("text")
+          .attr("x", width - 24)
+          .attr("y", 9)
+          .attr("dy", ".35em")
+          .style("text-anchor", "end")
+          .text(function(d) { return d; });
+
+    });
+}
+update()
+</script>
+</body>
