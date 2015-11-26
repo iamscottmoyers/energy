@@ -16,8 +16,10 @@ that isn't recorded in this visualisation).
 
 ## Getting Started
 
+```
 git clone https://github.com/iamscottmoyers/energy.git
 cd energy
 python -m SimpleHTTPServer 8000 &
+```
 
 Then navigate to localhost:8000.
