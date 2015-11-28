@@ -63,8 +63,8 @@ body {
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
 
-var margin = {top: 30, right: 20, bottom: 300, left: 70},
-    width = 1400 - margin.left - margin.right,
+var margin = {top: 30, right: 20, bottom: 300, left: 10},
+    width = 1300 - margin.left - margin.right,
     height = 850 - margin.top - margin.bottom;
 
 var x = d3.scale.ordinal()
@@ -149,16 +149,7 @@ function update() {
           .selectAll("text")
           .attr("transform"," translate(10,70) rotate(65)")
 
-      /* y-axis */
-      svg.append("g")
-          .attr("class", "y axis")
-          .call(yAxis)
-        .append("text")
-          .attr("transform", "rotate(-90)")
-          .attr("y", 6)
-          .attr("dy", ".71em")
-          .style("text-anchor", "end")
-          .text("Cost (£)");
+      /* Don't draw the y-axis. The bar heights are labeled so it just adds unnecessary ink. */
 
       /* Draw the bars */
       var provider = svg.selectAll(".provider")
