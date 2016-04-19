@@ -91,7 +91,7 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-var daysInYear = 356;
+var daysInYear = 365;
 var settings = [daysInYear, daysInYear, 1748, 5251, 1];
 function updateDuration(newValue) {
     document.querySelector('#DurationValueLabel').innerHTML = newValue
@@ -205,7 +205,7 @@ function update() {
           .text(function(d) { return d; });
 }
 
-d3.csv("data.csv", function(error, data) {
+d3.csv("tariffs.csv", function(error, data) {
      if (error) throw error;
      csvData = data;
      update();
